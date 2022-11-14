@@ -117,6 +117,44 @@ func GetVCardsByReader(r io.Reader) ([]VCard, error) {
 	return vcList, nil
 }
 
+
+// GetVCardsByString returns a list of vCards given an multiline string.
+func GetVCardsByString(str string) ([]VCard, error) {
+	strArr := ParseStringToSliceStrings(str)
+	return GetVCardsBySliceOfStrings(strArr)
+}
+
+//Parse strings to slice strings separate by "\r\n"
+func ParseStringToSliceStrings(inp string) []string {
+	return strings.Split(inp, "\r\n")
+}
+
+// GetVCardsByReader returns a list of vCards given an []string.
+func GetVCardsBySliceOfStrings(strArr []string) ([]VCard, error) {
+	vcList := make([]VCard, 0)
+
+	var vc *VCard
+
+	for _, line := range strArr {
+
+		switch line {
+		case prop.Begin:
+			vc = new(VCard)
+		case prop.End:
+			if vc != nil && strings.TrimSpace(vc.FormattedName) != "" && strings.TrimSpace(vc.Version) != "" {
+				vcList = append(vcList, *vc)
+			}
+		default:
+			// Any other kind of property: just read the property into *vc.
+			if vc != nil { // In case the file doesn't begin with a BEGIN.
+				readVCFProperty(vc, line)
+			}
+		}
+	}
+
+	return vcList, nil
+}
+
 // Marshal returns the vCard encoding of v.
 func Marshal(v interface{}) ([]byte, error) {
 	switch reflect.TypeOf(v).Kind() {
